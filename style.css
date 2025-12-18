@@ -1,0 +1,253 @@
+/* ================================================================= */
+/* 1. 基本設定とリセット */
+/* ================================================================= */
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', sans-serif;
+    background-color: #f0f2f5;
+    overflow: hidden; /* 画面全体のスクロールを禁止 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    touch-action: none; /* ブラウザ独自のジェスチャーを無効化 */
+}
+
+#game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    max-width: 1200px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+/* ================================================================= */
+/* 2. プレイヤーUI (手前・奥の共通スタイル) */
+/* ================================================================= */
+
+.player-ui {
+    width: 100%;
+    height: 120px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 10px 20px;
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    box-sizing: border-box;
+    transition: opacity 0.3s ease;
+}
+
+/* プレイヤー2 (奥側) を180度回転 */
+#player2-ui.reversed {
+    transform: rotate(180deg);
+}
+
+/* 情報表示エリア */
+.info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 100px;
+}
+
+.score-display {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #444;
+    white-space: nowrap;
+}
+
+.turn-indicator {
+    margin-top: 5px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* ================================================================= */
+/* 3. ピース選択リスト (横スクロール) */
+/* ================================================================= */
+
+.piece-selector {
+    flex-grow: 1;
+    height: 90px;
+    background-color: #f8f9fa;
+    border: 2px solid #eaedef;
+    border-radius: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    scrollbar-width: thin; /* Firefox用 */
+}
+
+/* Chrome/Safari用スクロールバー非表示設定（お好みで） */
+.piece-selector::-webkit-scrollbar {
+    height: 6px;
+}
+.piece-selector::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
+}
+
+.available-piece {
+    display: inline-block;
+    padding: 8px;
+    margin-right: 12px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.available-piece.selected {
+    border-color: #333;
+    background-color: #e9ecef;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* ================================================================= */
+/* 4. 操作ボタン (コントロールパネル) */
+/* ================================================================= */
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    min-width: 110px;
+}
+
+.controls button {
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: bold;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #fff;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.1s;
+    white-space: nowrap;
+}
+
+.controls button:active:not(:disabled) {
+    background-color: #f0f0f0;
+    transform: translateY(1px);
+}
+
+.controls button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    background-color: #eee;
+}
+
+/* 配置確定ボタンの強調 */
+.btn-place {
+    background-color: #28a745 !important;
+    color: white !important;
+    border-color: #218838 !important;
+}
+
+.btn-place:disabled {
+    background-color: #ccc !important;
+    color: #666 !important;
+}
+
+/* ================================================================= */
+/* 5. ゲームボード */
+/* ================================================================= */
+
+#board-container {
+    display: grid;
+    grid-template-columns: repeat(14, 1fr);
+    grid-template-rows: repeat(14, 1fr);
+    width: 85vmin; /* 画面の短い方の85%を基準にする */
+    height: 85vmin;
+    max-width: 65vh; /* 縦方向でUIと被らないように制限 */
+    max-height: 65vh;
+    background-color: #bdc3c7;
+    border: 4px solid #34495e;
+    border-radius: 4px;
+    gap: 1px; /* グリッド線 */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.cell {
+    background-color: #ecf0f1;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+/* プレイヤーの駒色 */
+.player-1 { 
+    background-color: #007bff; 
+    border: 2px inset rgba(255,255,255,0.3);
+}
+
+.player-2 { 
+    background-color: #fd7e14; 
+    border: 2px inset rgba(255,255,255,0.3);
+}
+
+/* プレビュー色 */
+.preview-valid { 
+    background-color: rgba(40, 167, 69, 0.7) !important; 
+    border: 2px dashed #fff;
+}
+
+.preview-invalid { 
+    background-color: rgba(220, 53, 69, 0.7) !important; 
+}
+
+/* スタートマスのスタイル */
+.cell.start-p1, .cell.start-p2 {
+    position: relative;
+    background-color: #f8f9fa; /* 少しだけ明るくする */
+}
+
+/* 中央のマーク (疑似要素) */
+.cell.start-p1::after, .cell.start-p2::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40%;
+    height: 40%;
+    border-radius: 50%;
+    opacity: 0.4; /* 控えめに表示 */
+}
+
+/* プレイヤー1(青)のスタート印 */
+.cell.start-p1::after {
+    background-color: #007bff;
+    border: 2px solid #005bb5;
+}
+
+/* プレイヤー2(橙)のスタート印 */
+.cell.start-p2::after {
+    background-color: #fd7e14;
+    border: 2px solid #cc7a00;
+}

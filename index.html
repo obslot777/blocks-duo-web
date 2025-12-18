@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ブロックス デュオ Webアプリ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+    
+        <div id="player2-ui" class="player-ui reversed">
+            <div id="p2-turn-indicator" class="turn-indicator">待機中</div>
+            <div id="player2-pieces" class="piece-selector horizontal-scroll"></div>
+    
+            <div class="controls">
+                <button id="p2-rotate-btn" class="btn-rotate">🔄 回転</button>
+                <button id="p2-flip-btn" class="btn-flip">↔️ 反転</button>
+                <button id="p2-place-btn" class="btn-place" disabled>✅ 配置確定</button>
+            </div>
+    
+            <div class="info">
+                <span id="p2-score" class="score-display">残マス: 89</span>
+            </div>
+        </div>
+    
+        <div id="board-container"></div>
+    
+        <div id="player1-ui" class="player-ui">
+            <div class="info">
+                <span id="p1-score" class="score-display">残マス: 89</span>
+            </div>
+    
+            <div id="player1-pieces" class="piece-selector horizontal-scroll"></div>
+    
+            <div class="controls">
+                <button id="p1-rotate-btn" class="btn-rotate">🔄 回転</button>
+                <button id="p1-flip-btn" class="btn-flip">↔️ 反転</button>
+                <button id="p1-place-btn" class="btn-place" disabled>✅ 配置確定</button>
+            </div>
+    
+            <div id="p1-turn-indicator" class="turn-indicator">あなたのターン</div>
+        </div>
+    
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
