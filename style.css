@@ -27,6 +27,22 @@ body {
     box-sizing: border-box;
 }
 
+#top-controls{
+    width:100%;
+    display:flex;
+    justify-content:flex-end;
+    margin-bottom:6px;
+}
+
+#new-game-btn{
+    padding:6px 10px;
+    font-weight:bold;
+    border-radius:8px;
+    border:1px solid #ccc;
+    background:#fff;
+    cursor:pointer;
+}
+
 /* ================================================================= */
 /* タブレット向けレスポンシブ調整 */
 /* 画面高さが足りず下が切れるケースの対処 */

@@ -216,6 +216,61 @@ function updateScores() {
 }
 
 // =================================================================
+// Persistence: save/load game state to localStorage
+// =================================================================
+const SAVE_KEY = 'blocks-duo-game-v1';
+
+function saveGameState() {
+    try {
+        const payload = {
+            board: gameState.board,
+            currentPlayer: gameState.currentPlayer,
+            piecesAvailable: gameState.piecesAvailable
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+    } catch (err) {
+        console.warn('saveGameState failed', err);
+    }
+}
+
+function loadGameState() {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return false;
+        const obj = JSON.parse(raw);
+        // basic validation
+        if (!obj.board || !Array.isArray(obj.board) || obj.board.length !== BOARD_SIZE) return false;
+        if (!obj.piecesAvailable) return false;
+        gameState.board = obj.board.map(row => row.slice(0, BOARD_SIZE));
+        gameState.currentPlayer = obj.currentPlayer || PLAYER.P1;
+        gameState.piecesAvailable = obj.piecesAvailable;
+        return true;
+    } catch (err) {
+        console.warn('loadGameState failed', err);
+        return false;
+    }
+}
+
+function clearSavedGame() {
+    try { localStorage.removeItem(SAVE_KEY); } catch (err) {}
+}
+
+function resetGameToInitial() {
+    gameState.board = Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0));
+    gameState.currentPlayer = PLAYER.P1;
+    gameState.piecesAvailable = {
+        [PLAYER.P1]: ALL_PIECES.map(p => p.id),
+        [PLAYER.P2]: ALL_PIECES.map(p => p.id)
+    };
+    gameState.selectedPiece = null;
+    clearPreview();
+    drawBoard();
+    drawPiecesSelectors();
+    updateGameUI();
+    clearSavedGame();
+}
+
+// =================================================================
 // 6. ハンドラ
 // =================================================================
 
@@ -296,12 +351,14 @@ function handlePlacement() {
     drawBoard();
     drawPiecesSelectors();
     switchTurn();
+    saveGameState();
 }
 
 function switchTurn() {
     gameState.currentPlayer = gameState.currentPlayer === PLAYER.P1 ? PLAYER.P2 : PLAYER.P1;
     consecutivePasses = 0; // 簡易版のためパス処理は省略可
     updateGameUI();
+    saveGameState();
     // 終了判定ロジックをここに追加可能
 }
 
@@ -325,6 +382,15 @@ function setupEventListeners() {
         document.getElementById(`${p}-flip-btn`).addEventListener('click', () => handlePieceTransformation('flip'));
         document.getElementById(`${p}-place-btn`).addEventListener('click', handlePlacement);
     });
+
+    // New game button
+    const newBtn = document.getElementById('new-game-btn');
+    if (newBtn) {
+        newBtn.addEventListener('click', () => {
+            if (!confirm('新しいゲームを開始しますか？ 進行中のデータは削除されます。')) return;
+            resetGameToInitial();
+        });
+    }
 
     const board = document.getElementById('board-container');
 
@@ -458,10 +524,16 @@ const sounds = {
 };
 
 function init() {
-    drawBoard();
-    drawPiecesSelectors();
+    // Try to load saved game; if none, start fresh
+    const restored = loadGameState();
+    if (!restored) {
+        resetGameToInitial();
+    } else {
+        drawBoard();
+        drawPiecesSelectors();
+        updateGameUI();
+    }
     setupEventListeners();
-    updateGameUI();
 }
 
 document.addEventListener('DOMContentLoaded', init);
