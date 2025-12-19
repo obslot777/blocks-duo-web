@@ -62,6 +62,9 @@ let lastValidPlacement = null; // {startX, startY}
 let consecutivePasses = 0; 
 let isTouchDragging = false;
 let activeTouchPointerId = null;
+let lastPointerCell = null; // {x,y} 最後に指したセル座標（セル単位）
+const DRAG_THRESHOLD = 8; // ピクセル単位のしきい値
+let dragStartPoint = null; // {clientX, clientY}
 
 // =================================================================
 // 3. ユーティリティ (操作 & 描画)
@@ -239,7 +242,15 @@ function handlePieceTransformation(type) {
     if (!gameState.selectedPiece) return;
     sounds.transform(); // 回転・反転音
     gameState.selectedPiece.shape = transformPiece.apply(gameState.selectedPiece.shape, transformPiece[type]);
-    if (lastValidPlacement) updatePiecePreview(lastValidPlacement.x, lastValidPlacement.y);
+    // 優先: 最後に触れたセルで再表示。それがなければ lastValidPlacement を使う
+    if (lastPointerCell) {
+        updatePiecePreview(lastPointerCell.x, lastPointerCell.y);
+    } else if (lastValidPlacement) {
+        updatePiecePreview(lastValidPlacement.x, lastValidPlacement.y);
+    } else {
+        // 選択中のピースはあるがプレビュー位置が未定ならプレビューをクリア
+        clearPreview();
+    }
 }
 
 function clearPreview() {
@@ -322,7 +333,12 @@ function setupEventListeners() {
         // Mouse pointer moves update preview directly
         if (e.pointerType === 'mouse') {
             const coords = getCellCoords(e.clientX, e.clientY);
-            if (coords) updatePiecePreview(coords.x, coords.y);
+            if (coords) {
+                lastPointerCell = coords;
+                updatePiecePreview(coords.x, coords.y);
+            } else {
+                lastPointerCell = null;
+            }
         }
     });
 
@@ -330,34 +346,68 @@ function setupEventListeners() {
     function onTouchMove(e) {
         if (e.pointerId !== activeTouchPointerId) return;
         const coords = getCellCoords(e.clientX, e.clientY);
-        if (coords) updatePiecePreview(coords.x, coords.y);
+        // 移動量がしきい値を超えたらドラッグとして扱う
+        if (dragStartPoint && !isTouchDragging) {
+            const dx = e.clientX - dragStartPoint.clientX;
+            const dy = e.clientY - dragStartPoint.clientY;
+            const distSq = dx * dx + dy * dy;
+            if (distSq >= DRAG_THRESHOLD * DRAG_THRESHOLD) {
+                isTouchDragging = true;
+            }
+        }
+
+        if (isTouchDragging) {
+            if (coords) {
+                lastPointerCell = coords;
+                updatePiecePreview(coords.x, coords.y);
+            } else {
+                lastPointerCell = null;
+            }
+        }
     }
 
     function onTouchUp(e) {
         if (e.pointerId !== activeTouchPointerId) return;
         try { board.releasePointerCapture(e.pointerId); } catch (err) {}
+        // タップ（短い移動）で離した場合は、その位置でプレビューを1回表示
+        if (!isTouchDragging) {
+            const coords = getCellCoords(e.clientX, e.clientY);
+            if (coords) {
+                lastPointerCell = coords;
+                updatePiecePreview(coords.x, coords.y);
+            }
+        }
         isTouchDragging = false;
         activeTouchPointerId = null;
+        dragStartPoint = null;
         board.removeEventListener('pointermove', onTouchMove);
         board.removeEventListener('pointerup', onTouchUp);
     }
 
+    board.addEventListener('pointercancel', (e) => {
+        if (e.pointerId === activeTouchPointerId) onTouchUp(e);
+    });
+
     // Use non-passive listener so we can call preventDefault() on touchstart
     board.addEventListener('pointerdown', (e) => {
         const coords = getCellCoords(e.clientX, e.clientY);
-        if (e.pointerType === 'mouse') {
+            if (e.pointerType === 'mouse') {
             // Mouse: click to place immediately if a valid preview exists
+            if (coords) {
+                lastPointerCell = coords;
+            }
             if (coords && lastValidPlacement) handlePlacement();
         } else if (e.pointerType === 'touch') {
-            // Touch: start drag-preview; do NOT place on touch end — only place via Confirm button
+            // Touch: record start point and wait until movement exceeds threshold to treat as drag
             e.preventDefault();
-            isTouchDragging = true;
+            isTouchDragging = false; // まだドラッグ開始していない
             activeTouchPointerId = e.pointerId;
+            dragStartPoint = { clientX: e.clientX, clientY: e.clientY };
             try { board.setPointerCapture(e.pointerId); } catch (err) {}
             board.addEventListener('pointermove', onTouchMove);
             board.addEventListener('pointerup', onTouchUp);
-            // Immediately show preview at touch start
-            if (coords) updatePiecePreview(coords.x, coords.y);
+            // タップ時にすぐプレビュー表示したければここで一度表示（しない選択も可）
+            // ここではタップでも離すまで確定しないので開始位置のプレビューは行わない
         }
     }, { passive: false });
 
