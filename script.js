@@ -324,25 +324,25 @@ function setupEventListeners() {
             const coords = getCellCoords(e.clientX, e.clientY);
             if (coords) updatePiecePreview(coords.x, coords.y);
         }
-        // Touch pointermove handled via window listener when dragging (see pointerdown)
     });
 
-    // Touch move handler used during active touch drag to allow moves outside board
+    // Touch drag handlers using pointer capture so dragging keeps sending events
     function onTouchMove(e) {
-        if (!isTouchDragging || e.pointerId !== activeTouchPointerId) return;
+        if (e.pointerId !== activeTouchPointerId) return;
         const coords = getCellCoords(e.clientX, e.clientY);
         if (coords) updatePiecePreview(coords.x, coords.y);
     }
 
-    function onTouchEnd(e) {
-        if (e.pointerId === activeTouchPointerId) {
-            isTouchDragging = false;
-            activeTouchPointerId = null;
-            window.removeEventListener('pointermove', onTouchMove);
-            window.removeEventListener('pointerup', onTouchEnd);
-        }
+    function onTouchUp(e) {
+        if (e.pointerId !== activeTouchPointerId) return;
+        try { board.releasePointerCapture(e.pointerId); } catch (err) {}
+        isTouchDragging = false;
+        activeTouchPointerId = null;
+        board.removeEventListener('pointermove', onTouchMove);
+        board.removeEventListener('pointerup', onTouchUp);
     }
 
+    // Use non-passive listener so we can call preventDefault() on touchstart
     board.addEventListener('pointerdown', (e) => {
         const coords = getCellCoords(e.clientX, e.clientY);
         if (e.pointerType === 'mouse') {
@@ -353,12 +353,13 @@ function setupEventListeners() {
             e.preventDefault();
             isTouchDragging = true;
             activeTouchPointerId = e.pointerId;
-            window.addEventListener('pointermove', onTouchMove);
-            window.addEventListener('pointerup', onTouchEnd);
+            try { board.setPointerCapture(e.pointerId); } catch (err) {}
+            board.addEventListener('pointermove', onTouchMove);
+            board.addEventListener('pointerup', onTouchUp);
             // Immediately show preview at touch start
             if (coords) updatePiecePreview(coords.x, coords.y);
         }
-    });
+    }, { passive: false });
 
     // キーボード
     window.addEventListener('keydown', (e) => {

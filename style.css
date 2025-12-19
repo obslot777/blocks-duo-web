@@ -216,6 +216,7 @@ body {
     height: 85vmin;
     max-width: 65vh; /* 縦方向でUIと被らないように制限 */
     max-height: 65vh;
+    touch-action: none; /* ボード上ではブラウザのパン/ズームを無効にしてタッチドラッグでの操作を優先 */
     background-color: #bdc3c7;
     border: 4px solid #34495e;
     border-radius: 4px;
