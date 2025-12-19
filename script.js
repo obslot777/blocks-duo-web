@@ -60,6 +60,8 @@ let gameState = {
 let currentPreviewCells = []; 
 let lastValidPlacement = null; // {startX, startY}
 let consecutivePasses = 0; 
+let isTouchDragging = false;
+let activeTouchPointerId = null;
 
 // =================================================================
 // 3. ユーティリティ (操作 & 描画)
@@ -314,14 +316,48 @@ function setupEventListeners() {
     });
 
     const board = document.getElementById('board-container');
-    board.addEventListener('mousemove', (e) => {
-        const coords = getCellCoords(e.clientX, e.clientY);
-        if (coords) updatePiecePreview(coords.x, coords.y);
+
+    // Pointer events: mouse keeps immediate placement, touch uses drag-preview + confirm
+    board.addEventListener('pointermove', (e) => {
+        // Mouse pointer moves update preview directly
+        if (e.pointerType === 'mouse') {
+            const coords = getCellCoords(e.clientX, e.clientY);
+            if (coords) updatePiecePreview(coords.x, coords.y);
+        }
+        // Touch pointermove handled via window listener when dragging (see pointerdown)
     });
 
-    board.addEventListener('mousedown', (e) => {
+    // Touch move handler used during active touch drag to allow moves outside board
+    function onTouchMove(e) {
+        if (!isTouchDragging || e.pointerId !== activeTouchPointerId) return;
         const coords = getCellCoords(e.clientX, e.clientY);
-        if (coords && lastValidPlacement) handlePlacement();
+        if (coords) updatePiecePreview(coords.x, coords.y);
+    }
+
+    function onTouchEnd(e) {
+        if (e.pointerId === activeTouchPointerId) {
+            isTouchDragging = false;
+            activeTouchPointerId = null;
+            window.removeEventListener('pointermove', onTouchMove);
+            window.removeEventListener('pointerup', onTouchEnd);
+        }
+    }
+
+    board.addEventListener('pointerdown', (e) => {
+        const coords = getCellCoords(e.clientX, e.clientY);
+        if (e.pointerType === 'mouse') {
+            // Mouse: click to place immediately if a valid preview exists
+            if (coords && lastValidPlacement) handlePlacement();
+        } else if (e.pointerType === 'touch') {
+            // Touch: start drag-preview; do NOT place on touch end — only place via Confirm button
+            e.preventDefault();
+            isTouchDragging = true;
+            activeTouchPointerId = e.pointerId;
+            window.addEventListener('pointermove', onTouchMove);
+            window.addEventListener('pointerup', onTouchEnd);
+            // Immediately show preview at touch start
+            if (coords) updatePiecePreview(coords.x, coords.y);
+        }
     });
 
     // キーボード
